@@ -1,44 +1,45 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
+
+type Status = { state: 'idle' | 'sending' | 'success' | 'error'; message?: string }
 
 export default function ContactPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
+  const [status, setStatus] = useState<Status>({ state: 'idle' })
 
-  // 送信先メールアドレスはクライアント公開の環境変数から読み込み
-  const to = process.env.NEXT_PUBLIC_CONTACT_TO ?? ''
+  const disabled = !name || !email || !message || status.state === 'sending'
 
-  const mailtoHref = useMemo(() => {
-    const subject = encodeURIComponent(`ポートフォリオからの問い合わせ: ${name || '無題'}`)
-    const body = encodeURIComponent(`お名前: ${name}\nメール: ${email}\n\n${message}`)
-    return `mailto:${to}?subject=${subject}&body=${body}`
-  }, [name, email, message, to])
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setStatus({ state: 'sending' })
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, message }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setStatus({ state: 'error', message: data.error || '送信に失敗しました' })
+        return
+      }
+      setStatus({ state: 'success', message: '送信が完了しました。ありがとうございます。' })
+      setName('')
+      setEmail('')
+      setMessage('')
+    } catch (err) {
+      setStatus({ state: 'error', message: 'ネットワークエラーが発生しました' })
+    }
+  }
 
   return (
     <section className="space-y-6">
       <h1 className="text-2xl font-semibold">コンタクト</h1>
 
-      {!to && (
-        <p className="rounded-md border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-200">
-          送信先メールアドレスが未設定です。`.env.local` に <code>NEXT_PUBLIC_CONTACT_TO</code> を設定してください。
-        </p>
-      )}
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (!to) {
-            alert('送信先メールアドレスが未設定です。NEXT_PUBLIC_CONTACT_TO を設定してください。')
-            return
-          }
-          const a = document.createElement('a')
-          a.href = mailtoHref
-          a.click()
-        }}
-        className="space-y-4"
-      >
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="mb-1 block text-sm text-white/80">お名前</label>
           <input
@@ -68,19 +69,25 @@ export default function ContactPage() {
             placeholder="お問い合わせ内容を入力してください"
           />
         </div>
-        <div>
+        <div className="flex items-center gap-3">
           <button
             type="submit"
-            className="rounded-md bg-white px-4 py-2 font-medium text-black transition hover:bg-white/90"
-            disabled={!to}
+            className="rounded-md bg-white px-4 py-2 font-medium text-black transition hover:bg-white/90 disabled:opacity-50"
+            disabled={disabled}
           >
-            メールを作成
+            {status.state === 'sending' ? '送信中…' : '送信'}
           </button>
+          {status.state === 'success' && (
+            <span className="text-sm text-green-400">{status.message}</span>
+          )}
+          {status.state === 'error' && (
+            <span className="text-sm text-red-400">{status.message}</span>
+          )}
         </div>
       </form>
 
       <p className="text-sm text-white/70">
-        後日、サーバー経由での送信（Supabase/Edge Functionや外部メールAPI）も実装できます。
+        このフォームはサーバー経由で保存とメール送信を試みます。メール送信には <code>RESEND_API_KEY</code> が必要です。保存のみの場合は <code>SUPABASE_SERVICE_ROLE_KEY</code> を設定してください。
       </p>
     </section>
   )
