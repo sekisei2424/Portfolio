@@ -49,3 +49,26 @@ alter table public.contact_messages enable row level security;
 
 ### Email sending
 If you want emails on every submission, sign up for Resend and set `RESEND_API_KEY` and `CONTACT_TO_EMAIL` in Vercel. If not set, API will still store to Supabase (if configured).
+
+### Supabase: Works (作品) を管理する
+カテゴリごとの作品をSupabaseで管理する場合の最小テーブル例:
+
+```sql
+create table if not exists public.works (
+	id uuid primary key default gen_random_uuid(),
+	title text not null,
+	category_slug text not null, -- 'design' | 'video' | 'music' | 'web' | 'illustration'
+	description text,
+	thumbnail_url text,          -- 画像の公開URL (R2/CDN/YouTubeサムネ等)
+	image_url text,              -- 任意。大きめ画像のURL
+	external_url text,           -- YouTube/SoundCloud/外部ページなど
+	created_at timestamptz not null default now()
+);
+
+alter table public.works enable row level security;
+
+-- 読み取りは匿名ユーザーに許可（公開ポートフォリオ用）
+create policy "Public read works" on public.works for select using (true);
+```
+
+Next.js 側では `NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_ANON_KEY` を設定すれば、サーバー/クライアントどちらからでも参照可能です（本リポジトリではカテゴリ詳細ページから参照する実装例を用意）。
