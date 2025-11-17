@@ -1,6 +1,7 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import type { Route } from 'next'
 
 export const metadata: Metadata = {
   title: 'Portfolio',
@@ -18,6 +19,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <li><Link href="/categories">カテゴリ</Link></li>
               <li><Link href="/profile">プロフィール</Link></li>
               <li><Link href="/contact">コンタクト</Link></li>
+              <li>
+                <Link href={'/admin' as Route} className="text-white/70 hover:text-white">
+                  管理
+                </Link>
+              </li>
             </ul>
           </nav>
         </header>
