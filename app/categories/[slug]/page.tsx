@@ -4,6 +4,9 @@ import { notFound } from 'next/navigation'
 import { CATEGORIES } from '@/lib/categories'
 import { createClient } from '@supabase/supabase-js'
 
+// Revalidate this page periodically so new works appear without full redeploy
+export const revalidate = 60 // seconds
+
 export async function generateStaticParams() {
   return CATEGORIES.map((c) => ({ slug: c.slug }))
 }
